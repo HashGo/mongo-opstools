@@ -1,3 +1,4 @@
 #!/usr/bin/env node
-var script = require('../index')
+var script = require('../lib/mongo-backup')
+
 script.run()
