@@ -13,7 +13,15 @@ nconf.overrides
   version : nconf.get "version"
 
 ### ###
+name = nconf.get "name"
+### ###
 nconf.env()
+
+files = [
+  "/etc/#{name}/conf.json"
+  "/etc/#{name}/mongo-backup.json"
+]
+
 
 optimist_argv = optimist.options({
   h:
@@ -36,6 +44,11 @@ optimist_argv = optimist.options({
     describe: 'Mongo Port'
     default: 27017
 
+  d :
+    alias : 'dbs'
+    describe : 'Comma separated list of database names that we should include in the backup.'
+    default  : ""
+
   o:
     alias : 'out'
     describe: 'Path where the mongodump should be saved to'
@@ -50,9 +63,16 @@ optimist_argv = optimist.options({
     describe: 'Enabled oplog for point-in-time snapshots.'
     default: false
 
+  f:
+    alias: 'file'
+    describe: "Path fo the configuraiton file or if enabled and no path is given it will look for #{files.join ","}"
+    default : false
+  
   fs:
     alias: 'forceTableScan'
     describe: """Forces to skip the index and scan the data directly. Pleae check the mongo docs at http://docs.mongodb.org/manual/reference/mongodump/ """
+    default : false
+
 
   aws_key :
     alias: 'aws_key'
@@ -79,21 +99,17 @@ nconf.use 'optimistArgvStore', {type:'literal', store:optimist_argv}
 ### ###
 verbose = nconf.get "v"
 ### ###
-name = nconf.get "name"
+f_flag = nconf.get "f"
+console.log "f_flag #{f_flag}"
+if f_flag
 
-### ###
-if nconf.get "f"
-  file = nconf.get "f"
-  console.log "Loadign file #{file}" if verbose
-  nconf.file file
-
-else
-  files = [
-    "/etc/#{name}/conf.json"
-    "/etc/#{name}/mongo-backup.json"
-  ]
-  console.log "Loadign files #{files.join ", "}" if verbose
-  files.forEach (f) => nconf.file f
+  if typeof f_flag is "string"
+    file = nconf.get "f"
+    console.log "Loadign file #{file}".grey if verbose
+    nconf.file file
+  else
+    console.log "Loadign files #{files.join ", "}".grey if verbose
+    files.forEach (f) => nconf.file f
 
 ### ###
 env = nconf.get 'NODE_ENV'
@@ -101,10 +117,10 @@ env = "test" unless env
 
 nconf.defaults
   env : env
-
+###
   test :
-    backup_dbs : [ "test" ]
-
+    dbs : [ "test" ]
+###
 
 class ConfManager
 

@@ -19,13 +19,31 @@ class MongoBackup
   ###
   DUMP_CMD = "mongodump"
 
-  constructor: ( ) ->
-    ### ###
-    dbs = conf.get 'backup_dbs'
-    ### ###
+
+  run : ( ) ->
     @verbose = conf.get "v"
+
+    init_good = @_init()
+
+    if not init_good or conf.get "help"
+      conf.showHelp()
+    else
+      @_doProcess (error) =>
+        if error
+          console.error error
+          process.exit -1
+        else
+          process.exit 1
+
+
+  _init : ( ) ->
     ### ###
-    @mongo_host = mongo_host = conf.get "host" #if conf.get "hosts" then (conf.get "hosts")?[0] else conf.get "host"
+    dbs = conf.get 'dbs'
+    @dbs = dbs = if dbs and typeof dbs is "string" then dbs.split ',' else dbs
+    return false unless dbs.length > 0
+
+    ### ###
+    @mongo_host = mongo_host = conf.get "host"
     @mongo_port = mongo_port = conf.get "port"
     ### ###
     @outBasePath = outBasePath = conf.get "out"
@@ -43,6 +61,7 @@ class MongoBackup
     @gzFilePath = "#{outBasePath}/#{@gzFileName}"
 
     @funcs = dbs.map (db_name) => ( next ) =>
+      return next() unless db_name
       ### ###
       args  = [
         "--host #{mongo_host}"
@@ -51,7 +70,6 @@ class MongoBackup
         "--db #{db_name}"
         "--out #{out}"
         "--journal"
-        "--forceTableScan"
       ]
       ### ###
       dbpath  = conf.get "dbpath"
@@ -59,6 +77,9 @@ class MongoBackup
       ### ###
       if (conf.get "oplog")
         args.push "--oplog"
+      ### ###
+      if (conf.get "fs")
+        args.push "--forceTableScan"
       ### ###
       username = conf.get "username"
       if username
@@ -82,19 +103,7 @@ class MongoBackup
         console.log stdout if @verbose
         next undefined, db_name
 
-
-  run : ( ) ->
-
-    if conf.get "help"
-      conf.showHelp()
-    else
-      @_doProcess (error) =>
-        if error
-          console.error
-          process.exit -1
-        else
-          process.exit 1
-
+    true
 
   _doProcess : ( callback ) ->
 
@@ -122,9 +131,9 @@ class MongoBackup
 
   _dump : ( callback ) ->
     unless @funcs
-      callback undefined, undefined
+      callback new Error "No dump function references.", "Nothing to do."
 
-    sys.print "Proceeding to dump [#{dbs.join ', '}] at #{dateFormat new Date}\n".grey.italic
+    sys.print "Proceeding to dump [#{@dbs.join ', '}] at #{dateFormat new Date}\n".grey.italic
 
     async.series @funcs, ( error, results ) =>
       if error
