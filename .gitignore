@@ -9,6 +9,9 @@ lib
 *.gz
 
 src/*.js
+src/**/*.js
+src/**/**/*.js
+src/**/**/**/*.js
 
 pids
 logs
