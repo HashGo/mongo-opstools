@@ -80,7 +80,6 @@ upstall_fab:
 	sudo easy_install --upgrade fabric
 	sudo easy_install --upgrade dogapi
 
-all: install build test
+all: install
 
 .PHONY: all 
-

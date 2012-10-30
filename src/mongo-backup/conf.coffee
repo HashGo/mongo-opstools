@@ -70,7 +70,8 @@ optimist_argv = optimist.options({
   
   fs:
     alias: 'forceTableScan'
-    describe: """Forces to skip the index and scan the data directly. Pleae check the mongo docs at http://docs.mongodb.org/manual/reference/mongodump/ """
+    describe: """Forces to skip the index and scan the data directly. \
+Pleae check the mongo docs at http://docs.mongodb.org/manual/reference/mongodump/ """
     default : false
 
 
@@ -100,7 +101,6 @@ nconf.use 'optimistArgvStore', {type:'literal', store:optimist_argv}
 verbose = nconf.get "v"
 ### ###
 f_flag = nconf.get "f"
-console.log "f_flag #{f_flag}"
 if f_flag
 
   if typeof f_flag is "string"
