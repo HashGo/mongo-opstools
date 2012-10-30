@@ -1,17 +1,26 @@
 # TODO : Use a cli tool to enable verbose output. (e.g. commander)
-
 require 'colors'
 
-fs      = require "fs"
-nconf   = require "nconf"
+fs       = require "fs"
+nconf    = require "nconf"
+optimist = require "optimist"
 
+### ###
 nconf.file 'package.json'
 
+### ###
 nconf.overrides
   version : nconf.get "version"
 
-# console.log "Loading argv and env configuration...".blue
-argv = nconf.argv({
+### ###
+nconf.env()
+
+optimist_argv = optimist.options({
+  h:
+    alias: 'help'
+    describe: 'Show help/usage.'
+    default : false
+
   v:
     alias: 'verbose'
     describe: 'Verbose output.'
@@ -43,12 +52,7 @@ argv = nconf.argv({
 
   fs:
     alias: 'forceTableScan'
-    describe: """Forces to skip the index and scan the data directly. Typically there are two cases where this behavior is preferable to the default:
-
-If you have key sizes over 800 bytes that would not be present in the _id index.
-Your database uses a custom _id field.
-When you run with --forceTableScan, mongodump does not use $snapshot. As a result, the dump produced by mongodump can
-reflect the state of the database at many different points in time."""
+    describe: """Forces to skip the index and scan the data directly. Pleae check the mongo docs at http://docs.mongodb.org/manual/reference/mongodump/ """
 
   aws_key :
     alias: 'aws_key'
@@ -66,17 +70,31 @@ reflect the state of the database at many different points in time."""
     default: false
 
 
-})
-### ###
-nconf.env()
+}).usage("""
+Invokes the mongodump process and uploads a tar gzipped version to a given S3 bucket.
+""").argv
+
+nconf.use 'optimistArgvStore', {type:'literal', store:optimist_argv}
+
 ### ###
 verbose = nconf.get "v"
 ### ###
 name = nconf.get "name"
+
 ### ###
-file = (nconf.get "f") ? "/etc/#{name}/conf.json"
-console.log "Loading file #{file} if available...".blue if verbose
-nconf.file file
+if nconf.get "f"
+  file = nconf.get "f"
+  console.log "Loadign file #{file}" if verbose
+  nconf.file file
+
+else
+  files = [
+    "/etc/#{name}/conf.json"
+    "/etc/#{name}/mongo-backup.json"
+  ]
+  console.log "Loadign files #{files.join ", "}" if verbose
+  files.forEach (f) => nconf.file f
+
 ### ###
 env = nconf.get 'NODE_ENV'
 env = "test" unless env
@@ -87,7 +105,11 @@ nconf.defaults
   test :
     backup_dbs : [ "test" ]
 
+
 class ConfManager
+
+  showHelp : () ->
+    optimist.showHelp console.err
 
   get: ( key, value ) ->
     _value = @_getFromEnv key

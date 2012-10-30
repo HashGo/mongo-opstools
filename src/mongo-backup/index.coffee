@@ -42,7 +42,6 @@ class MongoBackup
 
     @gzFilePath = "#{outBasePath}/#{@gzFileName}"
 
-    sys.print "Proceeding to dump [#{dbs.join ', '}] at #{dateFormat new Date}\n".grey.italic
     @funcs = dbs.map (db_name) => ( next ) =>
       ### ###
       args  = [
@@ -86,6 +85,19 @@ class MongoBackup
 
   run : ( ) ->
 
+    if conf.get "help"
+      conf.showHelp()
+    else
+      @_doProcess (error) =>
+        if error
+          console.error
+          process.exit -1
+        else
+          process.exit 1
+
+
+  _doProcess : ( callback ) ->
+
     async.series [
       ( next ) => @_dump        next
       ( next ) => @_compress    next
@@ -95,9 +107,7 @@ class MongoBackup
 
       if error
         sys.print "One of the following steps failed:\n+ #{result.join '\n+ '}\n".red
-        console.error error
-        process.exit -1
-
+        callback error
       else
         sys.print "Finished at #{dateFormat new Date}\n".grey.italic
 
@@ -106,13 +116,15 @@ class MongoBackup
         else
           sys.print "We did nothing.".red
 
-        process.exit 1
+        callback undefined
+
 
 
   _dump : ( callback ) ->
-    console.dir @funcs
     unless @funcs
       callback undefined, undefined
+
+    sys.print "Proceeding to dump [#{dbs.join ', '}] at #{dateFormat new Date}\n".grey.italic
 
     async.series @funcs, ( error, results ) =>
       if error
